@@ -61,5 +61,5 @@ class CreateResiduals:
             self.residuals.append(Residuals)
             self.residual_counts.append(residualscts)
 
-        print('residuals [{}]'.format(self.residuals))
-        print('residual counts [{}]'.format(self.residual_counts))
+        # print('residuals [{}]'.format(self.residuals))
+        # print('residual counts [{}]'.format(self.residual_counts))
