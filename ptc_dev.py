@@ -32,21 +32,36 @@ def load_image_data(path, gain_setting):
     if len(list_of_signals) < 2:
         raise ValueError("Not enough images to create a master bias.")
 
-    # Identify and create master bias from the first two bias images
-    bias_1, header_1 = fits.getdata(list_of_signals[0], header=True)
-    bias_2, header_2 = fits.getdata(list_of_signals[1], header=True)
+    # Find two bias images with EXPTIME = 0.001s and correct CAM-GAIN
+    bias_images = []
+    for image_path in list_of_signals:
+        with fits.open(image_path) as hdulist:
+            header_gain = hdulist[0].header.get('CAM-GAIN', None)
+            exposure_time = hdulist[0].header.get('EXPTIME', None)
 
-    # Verify that they are bias images
-    if header_1.get('EXPTIME', None) != 0.001 or header_2.get('EXPTIME', None) != 0.001:
-        raise ValueError("First two images must be bias frames with EXPTIME = 0.")
+            if header_gain == gain_setting and exposure_time == 0.001:
+                bias_images.append(image_path)
 
-    # Compute master bias as the average of the first two bias frames
+            if len(bias_images) == 2:
+                break  # Stop when two valid bias images are found
+
+    if len(bias_images) < 2:
+        raise ValueError("Could not find two bias images with EXPTIME = 0.001s and the specified gain setting.")
+
+    # Load bias images
+    bias_1, _ = fits.getdata(bias_images[0], header=True)
+    bias_2, _ = fits.getdata(bias_images[1], header=True)
+
+    # Compute master bias
     master_bias = (bias_1.astype(float) + bias_2.astype(float)) / 2
-    print("Master bias computed from first two images.")
+    print(f"Master bias computed from {bias_images[0]} and {bias_images[1]}.")
 
-    # Process remaining images
+    # Process remaining images that match the specified gain
     filtered_signals = []
-    for image_path in list_of_signals[2:]:  # Skip the first two (bias images)
+    for image_path in list_of_signals:
+        if image_path in bias_images:
+            continue  # Skip bias images
+
         with fits.open(image_path) as hdulist:
             header_gain = hdulist[0].header.get('CAM-GAIN', None)
 
@@ -55,7 +70,7 @@ def load_image_data(path, gain_setting):
             else:
                 print(f"Skipping {image_path} due to mismatched gain (Header: {header_gain}, Expected: {gain_setting}).")
 
-    # Ensure images can be paired
+    # Ensure valid pairs of images
     if len(filtered_signals) < 2:
         raise ValueError("Not enough valid images with the specified gain setting.")
 
