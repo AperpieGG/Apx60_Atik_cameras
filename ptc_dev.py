@@ -218,7 +218,8 @@ def plot_linearity(save_path, exposure_times, ExposureTimeList_5_95, Linearitygr
 
     figure, (ax1, ax2) = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
 
-    ax1.set_ylabel('Signal [cts]')
+    ax1.set_ylabel('Signal [ADU]')
+    ax1.set_title(f'Linearity - Gain {gain_setting}')
     ax1.plot([exposure_times], [corrected_counts], 'ro')
     plot_linearity_line(Linearitygradient, LinearityOffset, startx, endx, step, figure, ax1)
     ax1.axvline(x=startx, color='b', linestyle='--', linewidth=1)
