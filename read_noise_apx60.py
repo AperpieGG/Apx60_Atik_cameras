@@ -149,8 +149,8 @@ def main():
     parser.add_argument('gain', type=int, default='Gain value of the camera.')
     args = parser.parse_args()
 
-    base_path = '/Users/u5500483/Downloads/bias_swir/'
-    save_path = '/Users/u5500483/Downloads/'
+    base_path = '/data/'
+    save_path = '/home/ops/Downloads/RN/'
     sensitivity = 1.0
     path = os.path.join(base_path, args.directory)
 
