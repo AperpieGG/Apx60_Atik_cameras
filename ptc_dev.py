@@ -133,13 +133,14 @@ def plot_ptc_curve(average, variance, gain, popt, save_path, gain_setting, max_l
     mask = (average < max_linear)
     x_fit = average[mask]
     ax.plot(x_fit, ptc_fit_high(x_fit, *popt), 'b-', label=f'Gain = {gain:.3f} e$^-$/ADU')
-    ax.plot(saturation_grey_value, variance_sqr_saturation_grey, 'b*', label='Well Depth = %.2f ADU // %.2f e$^-$' % (
+    ax.plot(saturation_grey_value, variance_sqr_saturation_grey, 'b*', label='FWC = %.1f ADU // %.1f e$^-$' % (
         saturation_grey_value, saturation_grey_value * gain))
 
     ax.set_xlabel('Pixel count (ADU)')
     ax.set_ylabel('Variance (ADU$^2$)')
-    ax.set_title(f'Photon Transfer Curve (PTC) - Gain {gain_setting}')
+    ax.set_title(f'PTC - Gain {gain_setting}')
     ax.legend()
+    plt.tight_layout()
     plt.savefig(os.path.join(save_path, f'ptc_curve_{gain_setting}.png'))
     plt.close(fig)
 
@@ -161,7 +162,7 @@ def save_results(average, variance, gain, popt, saturation_value, path, gain_set
 
     with open(os.path.join(path, f'ptc_results_{gain_setting}.json'), 'w') as file:
         json.dump(results, file, indent=4)
-    print(f"Results saved: {path}/ptc_results_{gain_setting}.json")
+    print(f"Results saved: {path}ptc_results_{gain_setting}.json")
 
 
 def calculate_ptc(path, save_path, gain_setting):
