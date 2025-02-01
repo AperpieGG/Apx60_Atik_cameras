@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
 """
 This script reads the bias images from the given directory. It then plots
@@ -21,17 +21,18 @@ from utils import plot_images
 def read_bias_data(path, gain):
     """
     Reads the bias images from the specified directory, verifies the gain setting in the headers,
-    calculates the mean and standard deviation of the bias values, and returns these.
+    trims images, calculates the mean and standard deviation of bias values.
 
     Parameters:
         path (str): The path to the directory containing bias images.
-        gain (int): The expected gain setting of the camera.
+        gain (int or float): The expected gain setting of the camera.
 
     Returns:
         tuple: A tuple containing the mean values and standard deviation values.
     """
-    list_images = glob.glob(os.path.join(path, f'bias-{gain}*.fits'))
-    print(f'Found {len(list_images)} bias images with Gain: {gain}')
+    list_images = glob.glob(os.path.join(path, 'bias*.fits'))
+    print(f'Found {len(list_images)} images in {path}.')
+
     if not list_images:
         print(f"No bias images found in {path}")
         return None, None
@@ -41,27 +42,28 @@ def read_bias_data(path, gain):
     for image_path in list_images:
         with fits.open(image_path) as hdulist:
             image_data = hdulist[0].data.astype(float)
-            header_gain = hdulist[0].header.get('GAIN', None)  # Get gain from header, default to None if missing
+            header_gain = hdulist[0].header.get('CAM-GAIN', None)  # Extract gain from header
 
-            # Double-check the gain setting
+            # Check if the gain exists in the header
             if header_gain is None:
-                print(f"Warning: GAIN keyword missing in header of {image_path}. Skipping this image.")
-                continue
-            elif abs(header_gain - gain) > 1e-3:  # Allow small numerical tolerance
-                print(f"Warning: GAIN mismatch in {image_path} (Header: {header_gain}, Expected: {gain}). Skipping this image.")
+                print(f"[WARNING] Missing 'CAM-GAIN' in header of {image_path}. Skipping.")
                 continue
 
-            # Get image dimensions
+            # Ensure the gain matches the expected value (with a small numerical tolerance)
+            if not np.isclose(header_gain, gain, atol=1e-3):  # Allows for floating-point precision issues
+                print(f"[WARNING] GAIN mismatch in {image_path} (Header: {header_gain}, Expected: {gain}). Skipping.")
+                continue
+
+            # Get image dimensions and trim by 100 pixels on all sides
             height, width = image_data.shape
+            trimmed_image = image_data[1000:height - 1000, 1000:width - 1000]
 
-            # Trim 100 pixels from all sides
-            trimmed_image = image_data[100:height-100, 100:width-100]
-
-            print(f'Processing {image_path} | Image Gain: {header_gain} | Trimmed Shape: {trimmed_image.shape}')
+            print(
+                f'[INFO] Processing: {image_path} | Header Gain: {header_gain} | Trimmed Shape: {trimmed_image.shape}')
             bias_values.append(trimmed_image)
 
     if not bias_values:
-        print("No valid bias images after filtering. Exiting.")
+        print("[ERROR] No valid bias images after filtering. Exiting.")
         return None, None
 
     bias_values = np.array(bias_values)
@@ -73,13 +75,12 @@ def read_bias_data(path, gain):
 
 def plot_read_noise(value_mean, value_std, gain, save_path, sensitivity):
     """
-    Plots the 2-D histogram of the mean and standard deviation of the read noise values,
-    and also plots a histogram of the standard deviation values.
+    Plots the 2-D histogram of the mean and standard deviation of the read noise values.
 
     Parameters:
         value_mean (numpy.ndarray): The mean values of the read noise.
         value_std (numpy.ndarray): The standard deviation values of the read noise.
-        gain (int): The gain setting of the camera.
+        gain (int or float): The gain setting of the camera.
         save_path (str): The path to save the plot.
         sensitivity (float): The sensitivity factor to convert ADU to electrons.
     """
@@ -91,9 +92,9 @@ def plot_read_noise(value_mean, value_std, gain, save_path, sensitivity):
     hb = ax1.hist2d(value_mean, value_std, bins=1000, cmap='cividis', norm=LogNorm())
     ax1.set_xlabel('Mean (ADU)')
     ax1.set_ylabel('RMS (ADU)')
-    ax1.set_title(f'Gain Setting: {gain}')
+    ax1.set_title(f'Read Noise - Gain {gain}')
 
-    # Add text to the hist-2d plot
+    # Add text to the plot
     value_median_hist = np.median(value_std)
     ax1.text(
         0.95, 0.95,
@@ -126,12 +127,21 @@ def plot_read_noise(value_mean, value_std, gain, save_path, sensitivity):
     fig.colorbar(ax1.get_children()[0], ax=ax2, label='Number of Pixels')
     fig.tight_layout()
 
-    # save figure
-    plt.savefig(save_path + f'read_noise_{gain}.png')
+    # Save figure
+    save_filename = os.path.join(save_path, f'read_noise_{gain}.png')
+    plt.savefig(save_filename)
+    print(f'[INFO] Read Noise plot saved: {save_filename}')
 
-    # save results in json file (median, mean, rms)
-    with open(save_path + f'read_noise_{gain}.json', 'w') as json_file:
-        json.dump({'median': value_median, 'mean': value_mean_std, 'rms': rms}, json_file, indent=4)
+    # Save results in a JSON file
+    results = {
+        'median': value_median,
+        'mean': value_mean_std,
+        'rms': rms
+    }
+    json_filename = os.path.join(save_path, f'read_noise_{gain}.json')
+    with open(json_filename, 'w') as json_file:
+        json.dump(results, json_file, indent=4)
+    print(f'[INFO] Results saved in: {json_filename}')
 
     plt.show()
 
@@ -144,9 +154,8 @@ def main():
 
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Process bias images to calculate read noise')
-    parser.add_argument('directory', type=str, default='Directory containing bias images '
-                                                       '(relative to base path).')
-    parser.add_argument('gain', type=int, default='Gain value of the camera.')
+    parser.add_argument('directory', type=str, help='Directory containing bias images (relative to base path).')
+    parser.add_argument('gain', type=float, help='Gain value of the camera.')
     args = parser.parse_args()
 
     base_path = '/data/'
@@ -155,14 +164,16 @@ def main():
     path = os.path.join(base_path, args.directory)
 
     if not os.path.exists(path):
-        print(f'Directory {path} does not exist.')
+        print(f'[ERROR] Directory {path} does not exist.')
         return
 
+    # Read bias data
     value_mean, value_std = read_bias_data(path, args.gain)
     if value_mean is None or value_std is None:
-        print("No data to process.")
+        print("[ERROR] No valid data to process.")
         return
 
+    # Generate and save read noise plot
     plot_read_noise(value_mean, value_std, args.gain, save_path, sensitivity)
 
 
