@@ -156,7 +156,7 @@ def save_results(average, variance, gain, popt, saturation_value, path, gain_set
         'intercept': popt[1],
         'saturation_value': saturation_value,
         'linearity_error': linearity_error,
-        'residuals': residuals.tolist(),
+        'residuals': residuals,
         'exposures': exposures.tolist()
     }
 
