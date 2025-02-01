@@ -123,11 +123,18 @@ def fit_ptc_curve(average, variance, max_linear=40000):
     return popt, gain
 
 
-def plot_ptc_curve(average, variance, gain, popt, save_path, gain_setting):
+def plot_ptc_curve(average, variance, gain, popt, save_path, gain_setting, max_linear=40000):
     """Plot and save the PTC curve."""
     fig, ax = plt.subplots()
-    ax.plot(average, variance, 'ro', label="Data")
-    ax.plot(average, ptc_fit_high(average, *popt), 'b-', label=f'Gain = {gain:.3f} e$^-$/ADU')
+    max_index = np.argmax(variance)
+    saturation_grey_value = average[max_index]
+    variance_sqr_saturation_grey = variance[max_index]
+    ax.plot(average, variance, 'ro')
+    mask = (average < max_linear)
+    x_fit = average[mask]
+    ax.plot(x_fit, ptc_fit_high(x_fit, *popt), 'b-', label=f'Gain = {gain:.3f} e$^-$/ADU')
+    ax.plot(saturation_grey_value, variance_sqr_saturation_grey, 'b*', label='Well Depth = %.2f ADU // %.2f e$^-$' % (
+        saturation_grey_value, saturation_grey_value * gain))
 
     ax.set_xlabel('Pixel count (ADU)')
     ax.set_ylabel('Variance (ADU$^2$)')
@@ -148,7 +155,7 @@ def save_results(average, variance, gain, popt, saturation_value, path, gain_set
         'intercept': popt[1],
         'saturation_value': saturation_value,
         'linearity_error': linearity_error,
-        'residuals': residuals,
+        'residuals': residuals.tolist(),
         'exposures': exposures.tolist()
     }
 
