@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
 from scipy.optimize import curve_fit
-from utils_apx60 import plot_images
+from utils_apx60 import plot_images, CreateResiduals
 
 warnings.filterwarnings('ignore')
 plot_images()
@@ -183,18 +183,67 @@ def find_linearity_error(residuals):
     return (max(residuals) - min(residuals)) / 2
 
 
-def plot_linearity(exposures, residuals, linearity_error, save_path, gain_setting):
-    """Plot and save linearity results."""
-    fig, ax = plt.subplots()
-    ax.plot(exposures, residuals, 'ro', label=f'Linearity Error: ±{linearity_error:.3f}%')
-    ax.axhline(0, color='b', linestyle='--')
+def plot_linearity_line(gradient, offset, startx, endx, step, figure, ax1):
+    plt.figure(figure)
+    x_values = []
+    y_values = []
 
-    ax.set_xlabel('Exposure Time (s)')
-    ax.set_ylabel('Residuals [%]')
-    ax.set_title(f'Linearity Results - Gain {gain_setting}')
-    ax.legend()
-    plt.savefig(os.path.join(save_path, f'linearity_results_{gain_setting}.png'))
-    plt.close(fig)
+    for x in np.arange(startx, endx, step):
+        y = x * gradient + offset  # y = mx + c
+        x_values.append(x)
+        y_values.append(y)
+    ax1.plot(x_values, y_values, 'b-', label='%5.3f $x$ + %5.3f' % (gradient, offset))
+
+
+def plot_linearity(save_path, exposure_times, ExposureTimeList_5_95, Linearitygradient, LinearityOffset, CorrectedCtsList_5_95,
+                   ResidualsList_5_95, LinearityError, ResidualsList, corrected_counts, gain_setting):
+    startx = (min(ExposureTimeList_5_95))
+    endx = (max(ExposureTimeList_5_95))
+    step = 0.0001
+
+    figure, (ax1, ax2) = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+
+    ax1.set_ylabel('Signal [cts]')
+    ax1.plot([exposure_times], [corrected_counts], 'ro')
+    plot_linearity_line(Linearitygradient, LinearityOffset, startx, endx, step, figure, ax1)
+    ax1.axvline(x=startx, color='b', linestyle='--', linewidth=1)
+    ax1.axvline(x=endx, color='b', linestyle='--', linewidth=1)
+    ax1.legend(loc='best')
+
+    ax2.plot(exposure_times, ResidualsList, 'ro', linewidth=1, label=' LE = $\\pm$ %5.3f %%' % LinearityError)
+    ax2.plot([startx, endx], [0, 0], 'b-', linewidth=1)
+    ax2.set_ylim(-3 * LinearityError, +3 * LinearityError)
+    ax2.set_ylabel('Residuals [%]')
+    ax2.set_xlabel('Exposure [s]')
+    ax2.axvline(x=startx, color='b', linestyle='--', linewidth=1)
+    ax2.axvline(x=endx, color='b', linestyle='--', linewidth=1)
+    ax2.legend(loc='best')
+    plt.tight_layout()
+    figure.savefig(os.path.join(save_path, f'Linearity_{gain_setting}.png', bbox_inches='tight'))
+    plt.close(figure)
+
+
+def set_best_fit_ranges(xdata, ydata, startx, endx):
+    best_fit_xdata = []
+    best_fit_ydata = []
+
+    for x, y in zip(xdata, ydata):
+        if startx < x < endx:
+            best_fit_xdata.append(x)
+            best_fit_ydata.append(y)
+
+    return best_fit_xdata, best_fit_ydata
+
+
+def best_fit(xdata, ydata):
+    def func(x, a, b):
+        return a * x + b
+
+    Gradient = curve_fit(func, xdata, ydata)[0][0]
+    Offset = curve_fit(func, xdata, ydata)[0][1]
+
+    print('gradient [{}] offset [{}]'.format(Gradient, Offset))
+    return Gradient, Offset
 
 
 def main():
@@ -212,24 +261,29 @@ def main():
     saturation_value, average, variance, exposures, gain, popt = calculate_ptc(path, save_path,
                                                                                args.gain_setting)
 
-    # Compute residuals
-    residuals = (variance - ptc_fit_high(average, *popt)) / variance * 100
-
     # **Apply 5%-95% range of the saturation value**
     startx = saturation_value * 0.05
     endx = saturation_value * 0.95
-    filtered_exposures = exposures[(average >= startx) & (average <= endx)]
-    filtered_residuals = residuals[(average >= startx) & (average <= endx)]
 
-    # Compute linearity error using only this range
-    linearity_error = find_linearity_error(filtered_residuals)
+    CorrectedCtsList_5_95, ExposureTimeList_5_95 = set_best_fit_ranges(average, exposures, startx, endx)
+    Linearitygradient, LinearityOffset = best_fit(ExposureTimeList_5_95, CorrectedCtsList_5_95)
 
-    # Plot and save linearity results within the valid range
-    plot_linearity(filtered_exposures, filtered_residuals, linearity_error, save_path, args.gain_setting)
+    range_factor = 0.9
 
-    # Save final results
-    save_results(average, variance, gain, popt, saturation_value, save_path, args.gain_setting, linearity_error,
-                 residuals, exposures)
+    ResidualsList = CreateResiduals(exposures, average, LinearityOffset, Linearitygradient,
+                                    saturation_value, range_factor).residuals
+    ResidualsList_5_95 = CreateResiduals(ExposureTimeList_5_95, CorrectedCtsList_5_95, LinearityOffset,
+                                         Linearitygradient,
+                                         saturation_value, range_factor).residuals
+
+    LinearityError = find_linearity_error(ResidualsList_5_95)
+
+    plot_linearity(save_path, exposures, ExposureTimeList_5_95, Linearitygradient, LinearityOffset,
+                   CorrectedCtsList_5_95,
+                   ResidualsList_5_95, LinearityError, ResidualsList, average, args.gain_setting)
+
+    save_results(average, variance, gain, popt, saturation_value, save_path, args.gain_setting, LinearityError,
+                 ResidualsList, exposures)
 
 
 if __name__ == "__main__":
