@@ -219,7 +219,7 @@ def plot_linearity(save_path, exposure_times, ExposureTimeList_5_95, Linearitygr
     ax2.axvline(x=endx, color='b', linestyle='--', linewidth=1)
     ax2.legend(loc='best')
     plt.tight_layout()
-    figure.savefig(os.path.join(save_path, f'Linearity_{gain_setting}.png', bbox_inches='tight'))
+    figure.savefig(os.path.join(save_path, f'Linearity_{gain_setting}.png'))
     plt.close(figure)
 
 
