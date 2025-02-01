@@ -15,7 +15,7 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 from matplotlib.colors import LogNorm
-from utils import plot_images
+from utils_apx60 import plot_images
 
 
 def read_bias_data(path, gain):
