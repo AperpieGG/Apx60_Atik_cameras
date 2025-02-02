@@ -99,8 +99,8 @@ def load_image_data(path, gain_setting):
 
         # Trim the image by 1000 pixels from each side
         height, width = data_1.shape
-        trimmed_1 = data_1[2000:height - 2000, 1000:width - 2000]
-        trimmed_2 = data_2[2000:height - 2000, 1000:width - 2000]
+        trimmed_1 = data_1[2000:height - 2000, 2000:width - 2000]
+        trimmed_2 = data_2[2000:height - 2000, 2000:width - 2000]
 
         image_1.append(trimmed_1)
         image_2.append(trimmed_2)
