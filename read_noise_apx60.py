@@ -56,7 +56,7 @@ def read_bias_data(path, gain):
 
             # Get image dimensions and trim by 100 pixels on all sides
             height, width = image_data.shape
-            trimmed_image = image_data[1000:height - 1000, 1000:width - 1000]
+            trimmed_image = image_data[100:height - 100, 100:width - 100]
 
             print(
                 f'[INFO] Processing: {image_path} | Header Gain: {header_gain} | Trimmed Shape: {trimmed_image.shape}')
