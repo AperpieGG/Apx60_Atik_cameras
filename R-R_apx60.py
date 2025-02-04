@@ -24,6 +24,8 @@ def find_sensitivity(path, gain):
         if sensitivity is None:
             print(f"[WARNING] 'gain' key missing in {file}. Exiting.")
             return None
+        else:
+            print(f'[INFO] Found Sensitivity for Gain_setting {gain}: {sensitivity} e-/ADU')
     except Exception as e:
         print(f"[ERROR] Could not process {file}. Error: {e}")
 
