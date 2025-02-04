@@ -115,8 +115,10 @@ def plot_histograms(row_std, col_std, save_path, gain):
 def save_results(path, gain, row_std, col_std):
     # Save results in a JSON file
     results = {
-        'row_std': np.mean(row_std),
-        'col_std': np.mean(col_std),
+        'row_std_mean': np.mean(row_std),
+        'col_std_mean': np.mean(col_std),
+        'row_std_values': row_std.tolist(),
+        'col_std_values': col_std.tolist()
     }
     json_filename = os.path.join(path, f'R-R_{gain}.json')
     with open(json_filename, 'w') as json_file:
