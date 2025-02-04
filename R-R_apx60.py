@@ -139,10 +139,11 @@ def main():
     plot_images()
 
     base_path = '/data/'
-    save_path = '/home/ops/Downloads/R-R/'
+    save_path = '/home/ops/Downloads/R-R_apx60/'
+    path_ptc_results = '/home/ops/Downloads/PTC_apx60/'
     path = os.path.join(base_path, args.directory)
 
-    sensitivity = find_sensitivity(path, args.gain_setting)
+    sensitivity = find_sensitivity(path_ptc_results, args.gain_setting)
 
     bias_values = get_images(path, args.gain_setting, sensitivity)
 
