@@ -142,8 +142,8 @@ def compute_read_noise_electrons(read_noise_values, ptc_results, gain_array):
 
 
 # Define paths
-path_rn = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/RN/'
-path_ptc = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/PTC/'
+path_rn = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/RN_apx60/'
+path_ptc = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/PTC_apx60/'
 
 # Read JSON data
 read_rn_values, gain_array = read_rn(path_rn)  # Now gain_array contains all extracted gain names
