@@ -13,7 +13,8 @@ import glob
 
 
 def find_sensitivity(path, gain):
-    file = sorted(glob.glob(os.path.join(path, f'ptc_results_{gain}.json')))
+    file = os.path.join(path, f'ptc_results_{gain}.json')
+    print(f'[INFO] Reading Sensitivity from: {file}')
     try:
         with open(file, 'r') as f:
             data = json.load(f)
@@ -28,6 +29,7 @@ def find_sensitivity(path, gain):
             print(f'[INFO] Found Sensitivity for Gain_setting {gain}: {sensitivity} e-/ADU')
     except Exception as e:
         print(f"[ERROR] Could not process {file}. Error: {e}")
+        return None
 
     return sensitivity
 
