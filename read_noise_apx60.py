@@ -12,13 +12,14 @@ import json
 import os
 import numpy as np
 from astropy.io import fits
+from astropy.stats import SigmaClip
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 from matplotlib.colors import LogNorm
 from utils_apx60 import plot_images
 
 
-def read_bias_data(path, gain):
+def read_bias_data(path, gain, row_banding):
     """
     Reads the bias images from the specified directory, verifies the gain setting in the headers,
     trims images, calculates the mean and standard deviation of bias values.
@@ -26,6 +27,7 @@ def read_bias_data(path, gain):
     Parameters:
         path (str): The path to the directory containing bias images.
         gain (int or float): The expected gain setting of the camera.
+        row_banding (bool): Apply a Row-to-Row banding correction on bias images before calculating read noise.
 
     Returns:
         tuple: A tuple containing the mean values and standard deviation values.
@@ -42,6 +44,14 @@ def read_bias_data(path, gain):
     for image_path in list_images:
         with fits.open(image_path) as hdulist:
             image_data = hdulist[0].data.astype(float)
+
+            # if correct is true then apply a Row-to-Row banding correction
+            if row_banding:
+                clip = SigmaClip()
+                bands = np.nanmean(clip(image_data, axis=1, masked=False), axis=1) - np.nanmean(
+                    clip(image_data, masked=False))
+                image_data -= np.broadcast_to(bands[:, None], image_data.shape)
+
             header_gain = hdulist[0].header.get('CAM-GAIN', None)  # Extract gain from header
 
             # Check if the gain exists in the header
@@ -155,11 +165,13 @@ def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Process bias images to calculate read noise')
     parser.add_argument('directory', type=str, help='Directory containing bias images (relative to base path).')
-    parser.add_argument('gain', type=float, help='Gain value of the camera.')
+    parser.add_argument('gain', type=int, help='Gain value of the camera.')
+    parser.add_argument('--row_banding', default=False, action='store_true',
+                        help='Apply a Row-to-Row banding correction on bias images before rn.')
     args = parser.parse_args()
 
     base_path = '/data/'
-    save_path = '/home/ops/Downloads/RN/'
+    save_path = '/home/ops/Downloads/RN_apx_R-R/'
     sensitivity = 1.0
     path = os.path.join(base_path, args.directory)
 
@@ -168,7 +180,7 @@ def main():
         return
 
     # Read bias data
-    value_mean, value_std = read_bias_data(path, args.gain)
+    value_mean, value_std = read_bias_data(path, args.gain, args.row_banding)
     if value_mean is None or value_std is None:
         print("[ERROR] No valid data to process.")
         return
