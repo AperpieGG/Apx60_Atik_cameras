@@ -21,65 +21,81 @@ from utils_apx60 import plot_images
 
 def read_bias_data(path, gain, row_banding):
     """
-    Reads the bias images from the specified directory, verifies the gain setting in the headers,
-    trims images, calculates the mean and standard deviation of bias values.
+    Reads bias images from the directory, filters by the correct gain setting,
+    applies optional row banding correction, and calculates mean and standard deviation.
 
     Parameters:
-        path (str): The path to the directory containing bias images.
-        gain (int or float): The expected gain setting of the camera.
-        row_banding (bool): Apply a Row-to-Row banding correction on bias images before calculating read noise.
+        path (str): The directory containing bias images.
+        gain (float): The expected gain value from the camera.
+        row_banding (bool): Whether to apply row-to-row banding correction.
 
     Returns:
-        tuple: A tuple containing the mean values and standard deviation values.
+        tuple: (mean values, standard deviation values), or (None, None) if no valid images found.
     """
     list_images = glob.glob(os.path.join(path, 'bias*.fits'))
     print(f'Found {len(list_images)} images in {path}.')
 
     if not list_images:
-        print(f"No bias images found in {path}")
+        print(f"[ERROR] No bias images found in {path}.")
         return None, None
 
-    bias_values = []
-
+    # **Pre-filter images by checking only their headers**
+    valid_images = []
     for image_path in list_images:
-        with fits.open(image_path) as hdulist:
+        try:
+            header = fits.getheader(image_path)
+            header_gain = header.get('CAM-GAIN', None)
+
+            if header_gain is None:
+                print(f"[WARNING] Missing 'CAM-GAIN' in {image_path}. Skipping.")
+                continue
+
+            if not np.isclose(header_gain, gain, atol=1e-3):  # Floating-point tolerance
+                print(f"[WARNING] GAIN mismatch in {image_path} (Header: {header_gain}, Expected: {gain}). Skipping.")
+                continue
+
+            valid_images.append(image_path)
+
+        except Exception as e:
+            print(f"[ERROR] Could not read header from {image_path}: {e}")
+            continue
+
+    print(f"Filtered to {len(valid_images)} images with matching gain.")
+
+    if not valid_images:
+        print("[ERROR] No valid images found after filtering. Exiting.")
+        return None, None
+
+    # **Now process only valid images**
+    bias_values = []
+    for image_path in valid_images:
+        with fits.open(image_path, memmap=True) as hdulist:
             image_data = hdulist[0].data.astype(float)
 
-            # if correct is true then apply a Row-to-Row banding correction
+            # Apply row banding correction if needed
             if row_banding:
                 clip = SigmaClip()
                 bands = np.nanmean(clip(image_data, axis=1, masked=False), axis=1) - np.nanmean(
                     clip(image_data, masked=False))
                 image_data -= np.broadcast_to(bands[:, None], image_data.shape)
 
-            header_gain = hdulist[0].header.get('CAM-GAIN', None)  # Extract gain from header
-
-            # Check if the gain exists in the header
-            if header_gain is None:
-                print(f"[WARNING] Missing 'CAM-GAIN' in header of {image_path}. Skipping.")
-                continue
-
-            # Ensure the gain matches the expected value (with a small numerical tolerance)
-            if not np.isclose(header_gain, gain, atol=1e-3):  # Allows for floating-point precision issues
-                print(f"[WARNING] GAIN mismatch in {image_path} (Header: {header_gain}, Expected: {gain}). Skipping.")
-                continue
-
-            # Get image dimensions and trim by 100 pixels on all sides
+            # Trim by 100 pixels on all sides
             height, width = image_data.shape
             trimmed_image = image_data[100:height - 100, 100:width - 100]
 
             print(
-                f'[INFO] Processing: {image_path} | Header Gain: {header_gain} | Trimmed Shape: {trimmed_image.shape}')
+                f"[INFO] Processing: {image_path} | Header Gain: {header_gain} | Trimmed Shape: {trimmed_image.shape}")
             bias_values.append(trimmed_image)
 
     if not bias_values:
-        print("[ERROR] No valid bias images after filtering. Exiting.")
+        print("[ERROR] No valid bias images after reading. Exiting.")
         return None, None
 
     bias_values = np.array(bias_values)
 
     value_mean = np.mean(bias_values, axis=0).flatten()
     value_std = np.std(bias_values, axis=0).flatten()
+
     return value_mean, value_std
 
 
