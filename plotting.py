@@ -143,15 +143,22 @@ def compute_read_noise_electrons(read_noise_values, ptc_results, gain_array):
 
 # Define paths
 path_rn = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/RN_apx60/'
+path_rn_rr = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/RN_apx60_R-R/'
 path_ptc = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/PTC_apx60/'
 
 # Read JSON data
 read_rn_values, gain_array = read_rn(path_rn)  # Now gain_array contains all extracted gain names
+read_rr_values, _ = read_rn(path_rn_rr)
 read_ptc_values = read_ptc(path_ptc)
 
 # Compute read noise in electrons and extract values
 read_noise_electrons, gain_values, saturation_values, linearity_errors, dynamic_range = (
     compute_read_noise_electrons(read_rn_values, read_ptc_values, gain_array)
+)
+
+# Compute read noise in electrons and extract values
+read_noise_rr_electrons, _, _, _, _ = (
+    compute_read_noise_electrons(read_rr_values, read_ptc_values, gain_array)
 )
 
 # Plot everything with respect to gain
@@ -162,6 +169,7 @@ ax[0].grid()
 ax[0].set_ylabel('Gain (e-/ADU)')
 
 ax[1].plot(gain_array, read_noise_electrons, 'bo-')
+ax[1].plot(gain_array, read_noise_rr_electrons, 'ro-')
 ax[1].grid()
 ax[1].set_ylabel('Read noise (e-)')
 
@@ -179,5 +187,5 @@ ax[-1].xaxis.set_major_locator(ticker.MultipleLocator(40))
 # ax[4].grid()
 # ax[4].set_ylabel('Linearity Error')
 plt.tight_layout()
-fig.savefig('Apx60.pdf', dpi=300)
+# fig.savefig('Apx60.pdf', dpi=300)
 plt.show()
