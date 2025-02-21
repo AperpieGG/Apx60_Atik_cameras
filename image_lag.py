@@ -9,21 +9,21 @@ import numpy as np
 def read_images_data(path, gain):
     """
     Reads bias images from the directory, filters by the correct gain setting,
-    applies optional row banding correction, and calculates mean and standard deviation.
+    applies optional row banding correction, and calculates mean per image.
 
     Parameters:
         path (str): The directory containing bias images.
         gain (integer): The expected gain value from the camera.
 
     Returns:
-        tuple: (mean values, standard deviation values), or (None, None) if no valid images found.
+        list: A list of mean values for each frame, or None if no valid images are found.
     """
     list_images = glob.glob(os.path.join(path, 'lag*.fits'))
     print(f'Found {len(list_images)} images in {path}.')
 
     if not list_images:
         print(f"[ERROR] No bias images found in {path}.")
-        return None, None
+        return None
 
     # **Pre-filter images by checking only their headers**
     valid_images = []
@@ -50,10 +50,10 @@ def read_images_data(path, gain):
 
     if not valid_images:
         print("[ERROR] No valid images found after filtering. Exiting.")
-        return None, None
+        return None
 
-    # **Now process only valid images**
-    images = []
+    # **Process each valid image and compute mean per frame**
+    mean_per_frame = []
     for image_path in valid_images:
         with fits.open(image_path, memmap=True) as hdulist:
             image_data = hdulist[0].data.astype(float)
@@ -62,44 +62,42 @@ def read_images_data(path, gain):
             height, width = image_data.shape
             trimmed_image = image_data[2000:height - 2000, 2000:width - 2000]
 
-            print(
-                f"[INFO] Processing: {image_path} | Header Gain: {header_gain} | Trimmed Shape: {trimmed_image.shape}")
-            images.append(trimmed_image)
+            frame_mean = np.mean(trimmed_image)  # Compute mean per image
+            mean_per_frame.append(frame_mean)
 
-    if not images:
-        print("[ERROR] No valid bias images after reading. Exiting.")
-        return None, None
+            print(f"[INFO] Processed: {image_path} | Mean Value: {frame_mean:.2f}")
 
-    images = np.array(images)
-
-    mean_images = np.mean(images, axis=0).flatten()
-
-    return mean_images
+    return mean_per_frame
 
 
-def plot_images_vs_frame(images, save_path, gain):
+def plot_images_vs_frame(mean_values, save_path, gain):
     """
-    Plots the average of each image vs frame number.
+    Plots the average value of each image vs frame number.
 
     Parameters:
-        images (ndarray): A 2D array of images where each row is an image.
+        mean_values (list): A list of average pixel values per frame.
         save_path (str): The directory to save the plot.
         gain (integer): The gain setting of the camera.
     """
-    fig, ax = plt.subplots()
-    ax.plot(images, 'o', markersize=1)
+    frame_numbers = np.arange(1, len(mean_values) + 1)  # Generate frame numbers
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(frame_numbers, mean_values, 'o-', markersize=4, label="Frame Mean")
     ax.set_xlabel('Frame Number (#)')
-    ax.set_ylabel('Average value (ADU)')
-    ax.set_title(f'Image Series - Gain {gain}')
-    ax.legend()
+    ax.set_ylabel('Average Value (ADU)')
+    ax.set_title(f'Average Image Value vs Frame Number (Gain {gain})')
     plt.tight_layout()
-    plt.savefig(os.path.join(save_path, f'lag_{gain}.png'))
-    plt.close(fig)
+
+    # Save the figure
+    plot_filename = os.path.join(save_path, f'lag_{gain}.png')
+    plt.savefig(plot_filename)
+    print(f"[INFO] Plot saved: {plot_filename}")
+    plt.show()
 
 
 def main():
-    """Main function to parse arguments and execute PTC analysis."""
-    parser = argparse.ArgumentParser(description='Test average of each image and plot vs frame number')
+    """Main function to parse arguments and execute the script."""
+    parser = argparse.ArgumentParser(description='Compute average of each image and plot vs frame number')
     parser.add_argument('gain_setting', type=int, help='Gain setting of the camera.')
     parser.add_argument('directory', type=str, help='Directory containing bias images (relative to base path).')
     args = parser.parse_args()
@@ -111,15 +109,14 @@ def main():
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    images = read_images_data(path, args.gain_setting)
-    if images is None:
+    mean_values = read_images_data(path, args.gain_setting)
+    if mean_values is None:
         return
 
-    plot_images_vs_frame(images, save_path, args.gain_setting)
+    plot_images_vs_frame(mean_values, save_path, args.gain_setting)
 
     print("[INFO] Processing complete.")
 
 
 if __name__ == "__main__":
     main()
-
