@@ -93,7 +93,7 @@ def read_bias_data(path, gain):
     # **Now process only valid images**
     bias_values = []
     for image_path in valid_images:
-        with fits.open(image_path, memmap=True) as hdulist:
+        with fits.open(image_path, memmap=False) as hdulist:
             image_data = hdulist[0].data.astype(float)
 
             # Trim by 100 pixels on all sides
