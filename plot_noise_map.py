@@ -37,7 +37,7 @@ def read_bias_data(path, gain):
 
     bias_values = []
     for image_path in valid_images:
-        with fits.open(image_path, memmap=True) as hdulist:
+        with fits.open(image_path, memmap=False) as hdulist:
             image_data = hdulist[0].data.astype(float)
             height, width = image_data.shape
             trimmed_image = image_data[100:height - 100, 100:width - 100]
@@ -94,7 +94,7 @@ def main():
     args = parser.parse_args()
 
     base_path = '/data/'
-    save_path = '/home/ops/Downloads/RN_apx_R-R/'
+    save_path = '/home/ops/Downloads/RN_maps/'
     path = os.path.join(base_path, args.directory)
 
     if not os.path.exists(path):
@@ -109,3 +109,7 @@ def main():
         plot_noise_frame(value_std, args.gain_setting, save_path)
     else:
         print("[ERROR] Could not generate noise frame.")
+
+
+if __name__ == "__main__":
+    main()
