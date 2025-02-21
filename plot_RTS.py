@@ -98,7 +98,7 @@ def read_bias_data(path, gain):
 
             # Trim by 100 pixels on all sides
             height, width = image_data.shape
-            trimmed_image = image_data[1:height - 1, 1:width - 1]
+            trimmed_image = image_data[1000:height - 1000, 1000:width - 1000]
 
             print(
                 f"[INFO] Processing: {image_path} | Header Gain: {header_gain} | Trimmed Shape: {trimmed_image.shape}")
@@ -138,15 +138,25 @@ def find_pixel_coordinates(bias_data, threshold):
 
 
 def create_binary_image(bias_data, threshold):
-    stds = np.std(bias_data, axis=0).reshape(bias_data.shape[1], bias_data.shape[2])
+    """
+    Creates a binary image where pixels above the threshold are marked as 1.
+
+    Parameters:
+        bias_data (ndarray): 3D array of bias images.
+        threshold (ndarray): Threshold value to mark noise pixels.
+
+    Returns:
+        ndarray: Binary image.
+    """
+    stds = np.std(bias_data, axis=0)  # Keep the original 2D shape
+
+    # Create a binary mask where pixels exceeding the threshold are marked as 1
     binary_image = np.zeros_like(stds)
     binary_image[stds > threshold] = 1
-    coordinates = np.array(np.where(binary_image == 1)).T
-    print("Number of noise pixels:", len(coordinates))
-    for coord in coordinates:
-        x, y = coord[0], coord[1]
-        value = stds[x, y]
-        # print("Pixel at coordinates ({}, {}) has value {:.2f}.".format(x, y, value))
+
+    coordinates = np.column_stack(np.where(binary_image == 1))  # Get pixel coordinates
+    print(f"Number of noise pixels: {len(coordinates)}")
+
     return binary_image
 
 
@@ -187,7 +197,7 @@ def main():
     parser = argparse.ArgumentParser(description='Test average of each image and plot vs frame number')
     parser.add_argument('directory', type=str, help='Directory containing bias images (relative to base path).')
     parser.add_argument('gain_setting', type=int, help='Gain setting of the camera.')
-    parser.add_argument('threshold', type=int, help='value times the read noise, ie. 3 sigma with sigma rn.')
+    parser.add_argument('threshold', type=int, help='value times the read noise, e.g., 3 sigma.')
 
     args = parser.parse_args()
 
@@ -199,17 +209,25 @@ def main():
         os.makedirs(save_path)
 
     plot_images()
-    # 3-D array of the bias images
-    bias_values, value_std = read_bias_data(path)
 
-    # Set threshold (times) the read noise
-    threshold = value_std * args.threshold
+    # 3D array of the bias images
+    bias_values, value_std = read_bias_data(path, args.gain_setting)
 
+    if bias_values is None:
+        print("[ERROR] No valid bias images found.")
+        return
+
+    # Compute standard deviation per pixel
+    stds = np.std(bias_values, axis=0)  # 2D array of pixel-wise standard deviation
+
+    # Ensure threshold is a scalar by taking the mean of value_std
+    threshold = np.mean(value_std) * args.threshold  # Ensuring correct threshold calculation
+
+    # Create and plot the binary image
     binary_image = create_binary_image(bias_values, threshold)
     plot_binary_image(binary_image, args.gain_setting)
 
     # Find coordinates of pixel with maximum standard deviation
-    stds = np.std(bias_values, axis=0).reshape(bias_values.shape[1], bias_values.shape[2])
     max_std_index = np.unravel_index(np.argmax(stds), stds.shape)
     print("Coordinates of pixel with maximum standard deviation:", max_std_index)
 
@@ -217,10 +235,10 @@ def main():
     frame_numbers, pixel_values = extract_pixel_time_series(bias_values, max_std_index)
     plot_pixel_time_series(frame_numbers, pixel_values, max_std_index, args.gain_setting)
 
-    # Print the total number of pixels that exceed the threshold value
+    # Print total number of noise pixels
     num_noise_pixels = np.sum(stds > threshold)
     print(f'Total number of pixels exceeding the threshold value: {num_noise_pixels}')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
