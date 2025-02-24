@@ -142,9 +142,9 @@ def compute_read_noise_electrons(read_noise_values, ptc_results, gain_array):
 
 
 # Define paths
-path_rn = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/RN_qhy600/'
+path_rn = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/RN_apx60/'
 # path_rn_rr = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/RN_apx60_R-R/'
-path_ptc = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/PTC_qhy600/'
+path_ptc = '/Users/u5500483/Documents/GitHub/Apx60_Atik_cameras/PTC_apx60/'
 
 # Read JSON data
 read_rn_values, gain_array = read_rn(path_rn)  # Now gain_array contains all extracted gain names
@@ -186,5 +186,5 @@ ax[-1].xaxis.set_major_locator(ticker.MultipleLocator(10))
 # ax[4].grid()
 # ax[4].set_ylabel('Linearity Error')
 plt.tight_layout()
-fig.savefig('QHY600.pdf', dpi=300)
+# fig.savefig('Apx60.pdf', dpi=300)
 plt.show()
