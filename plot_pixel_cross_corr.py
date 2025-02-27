@@ -144,7 +144,6 @@ def main():
     parser = argparse.ArgumentParser(description='Process bias images to calculate read noise')
     parser.add_argument('directory', type=str, help='Directory containing bias images (relative to base path).')
     parser.add_argument('gain', type=int, help='Gain value of the camera.')
-    parser.add_argument('shape', type=int, default=2, help='Shape of the image, 1 for column and 2 for row.')
     args = parser.parse_args()
 
     plot_images()
