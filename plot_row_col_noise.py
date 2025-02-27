@@ -203,7 +203,7 @@ def main():
     parser.add_argument('gain', type=int, help='Gain value of the camera.')
     args = parser.parse_args()
 
-    base_path = '/data/'
+    base_path = '/data/20250201/'
     save_path = '/home/ops/Downloads/RN_apx60/'
     path = os.path.join(base_path, args.directory)
 
