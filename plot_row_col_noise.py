@@ -101,7 +101,7 @@ def read_bias_data(path):
     # **Now process only valid images**
     bias_values = []
     for image_path in list_images:
-        with fits.open(image_path, memmap=True) as hdulist:
+        with fits.open(image_path, memmap=False) as hdulist:
             image_data = hdulist[0].data.astype(float)
             bias_values.append(image_data)
 
@@ -216,3 +216,7 @@ def main():
     std_col, mean_col = column_to_column(bias_values)
     plot_row_noise(std_row, mean_row, args.gain, save_path)
     plot_col_noise(std_col, mean_col, args.gain, save_path)
+
+
+if __name__ == '__main__':
+    main()
