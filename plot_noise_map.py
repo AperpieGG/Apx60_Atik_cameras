@@ -59,7 +59,7 @@ def plot_noise_frame(value_std, save_path):
     img = ax.imshow(value_std, cmap='inferno', origin='lower')
 
     # Add a colorbar indicating the standard deviation values
-    cbar = plt.colorbar(img, ax=ax, label='Standard Deviation (e$^-$/s)')
+    cbar = plt.colorbar(img, ax=ax, label='Standard Deviation (e$^-$)')
 
     ax.set_title(f'Pixel Noise Map')
     ax.set_xlabel('X Coordinate')
