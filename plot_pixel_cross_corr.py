@@ -7,65 +7,29 @@ from astropy.io import fits
 from utils_apx60 import plot_images
 
 
-def read_images(path, gain):
+def read_images(path):
     """
-    Reads bias images from the directory, filters by the correct gain setting,
-    and calculates mean and standard deviation.
+    Reads bias images from the directory and calculates mean and standard deviation.
 
     Parameters:
         path (str): The directory containing bias images.
-        gain (float): The expected gain value from the camera.
 
     Returns:
         tuple: (mean values, standard deviation values), or (None, None) if no valid images found.
     """
-    list_images = glob.glob(os.path.join(path, 'bias*.fits'))
+    list_images = glob.glob(os.path.join(path, 'image*.fits'))
     print(f'Found {len(list_images)} images in {path}.')
 
     if not list_images:
         print(f"[ERROR] No bias images found in {path}.")
         return None, None
 
-    # **Pre-filter images by checking only their headers**
-    valid_images = []
-    for image_path in list_images:
-        try:
-            header = fits.getheader(image_path)
-            header_gain = header.get('CAM-GAIN', None)
-
-            if header_gain is None:
-                print(f"[WARNING] Missing 'CAM-GAIN' in {image_path}. Skipping.")
-                continue
-
-            if not np.isclose(header_gain, gain, atol=1e-3):  # Floating-point tolerance
-                print(f"[WARNING] GAIN mismatch in {image_path} (Header: {header_gain}, Expected: {gain}). Skipping.")
-                continue
-
-            valid_images.append(image_path)
-
-        except Exception as e:
-            print(f"[ERROR] Could not read header from {image_path}: {e}")
-            continue
-
-    print(f"Filtered to {len(valid_images)} images with matching gain.")
-
-    if not valid_images:
-        print("[ERROR] No valid images found after filtering. Exiting.")
-        return None, None
-
     # **Now process only valid images**
     bias_values = []
-    for image_path in valid_images:
+    for image_path in list_images:
         with fits.open(image_path, memmap=False) as hdulist:
             image_data = hdulist[0].data.astype(float)
-
-            # Trim by 100 pixels on all sides
-            height, width = image_data.shape
-            trimmed_image = image_data[1:height - 1, 1:width - 1]
-
-            print(
-                f"[INFO] Processing: {image_path} | Header Gain: {header_gain} | Trimmed Shape: {trimmed_image.shape}")
-            bias_values.append(trimmed_image)
+            bias_values.append(image_data)
 
     if not bias_values:
         print("[ERROR] No valid bias images after reading. Exiting.")
@@ -95,7 +59,7 @@ def compute_cross_correlation(image):
     return cross_corr
 
 
-def plot_cross_correlation(cross_corr, gain, save_path):
+def plot_cross_correlation(cross_corr, save_path):
     """
     Plot the cross-correlation coefficient as a 3D bar plot.
     Each pixel is represented as a separate bar.
@@ -126,7 +90,7 @@ def plot_cross_correlation(cross_corr, gain, save_path):
     ax.set_zlim(0, 0.2)
 
     # Save figure
-    save_filename = os.path.join(save_path, f'pixel_corr_{gain}.png')
+    save_filename = os.path.join(save_path, f'pixel_corr.png')
     plt.savefig(save_filename)
     print(f'[INFO] Read Noise plot saved: {save_filename}')
 
@@ -143,13 +107,12 @@ def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Process bias images to calculate read noise')
     parser.add_argument('directory', type=str, help='Directory containing bias images (relative to base path).')
-    parser.add_argument('gain', type=int, help='Gain value of the camera.')
     args = parser.parse_args()
 
     plot_images()
 
-    base_path = '/data/20250201/'
-    save_path = '/home/ops/Downloads/RN_apx60/'
+    base_path = '/Users/u5500483/Downloads/'
+    save_path = '/Users/u5500483/Downloads/'
     path = os.path.join(base_path, args.directory)
 
     if not os.path.exists(path):
@@ -157,9 +120,9 @@ def main():
         return
 
     # Compute and plot cross-correlation for the first image
-    bias_values = read_images(path, args.gain)
+    bias_values = read_images(path)
     cross_corr_matrix = compute_cross_correlation(bias_values[0])
-    plot_cross_correlation(cross_corr_matrix, args.gain, save_path)
+    plot_cross_correlation(cross_corr_matrix, save_path)
 
 
 if __name__ == '__main__':
