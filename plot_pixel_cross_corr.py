@@ -4,6 +4,8 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from astropy.io import fits
+from matplotlib.offsetbox import bbox_artist
+
 from utils_apx60 import plot_images
 
 
@@ -89,9 +91,9 @@ def plot_cross_correlation(cross_corr, save_path):
     ax.set_title('Pixel-to-Pixel Cross-Correlation')
     ax.set_zlim(0, 0.2)
 
-    # Save figure
-    save_filename = os.path.join(save_path, f'pixel_corr.png')
-    plt.savefig(save_filename)
+    # Save figure as pdf
+    save_filename = os.path.join(save_path, 'cross_correlation.pdf')
+    plt.savefig(save_filename, bbox_inches='tight')
     print(f'[INFO] Read Noise plot saved: {save_filename}')
 
     plt.show()
