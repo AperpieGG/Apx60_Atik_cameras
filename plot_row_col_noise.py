@@ -65,7 +65,8 @@ def plot_col_noise(std_col, mean_col, save_path):
     ax1 = plt.subplot(gs[0])
     hb = ax1.hist2d(mean_col, std_col, bins=50, cmap='cividis', norm=LogNorm())
     ax1.set_xlabel('Mean (ADU)')
-    ax1.set_ylabel('Noise for Row (ADU)')
+    ax1.set_ylabel('Column for Row (ADU)')
+    ax1.set_ylim(0, 0.5)
 
     ax2 = plt.subplot(gs[1])
     ax2.hist(std_col, bins=50, orientation='horizontal', color='blue', histtype='step')
@@ -82,8 +83,8 @@ def plot_col_noise(std_col, mean_col, save_path):
     fig.colorbar(ax1.get_children()[0], ax=ax2, label='Number of Pixels')
     fig.tight_layout()
     # Save figure
-    save_filename = os.path.join(save_path, f'column_noise.png')
-    plt.savefig(save_filename)
+    save_filename = os.path.join(save_path, f'column_noise.pdf')
+    plt.savefig(save_filename, bbox_inches='tight')
     print(f'[INFO] Read Noise plot saved: {save_filename}')
 
     plt.show()
@@ -97,6 +98,7 @@ def plot_row_noise(std_row, mean_row, save_path):
     hb = ax1.hist2d(mean_row, std_row, bins=50, cmap='cividis', norm=LogNorm())
     ax1.set_xlabel('Mean (ADU)')
     ax1.set_ylabel('Noise for Row (ADU)')
+    ax1.set_ylim(0, 1)
 
     ax2 = plt.subplot(gs[1])
     ax2.hist(std_row, bins=50, orientation='horizontal', color='blue', histtype='step')
@@ -113,8 +115,8 @@ def plot_row_noise(std_row, mean_row, save_path):
     fig.colorbar(ax1.get_children()[0], ax=ax2, label='Number of Pixels')
     fig.tight_layout()
     # Save figure
-    save_filename = os.path.join(save_path, f'row_noise.png')
-    plt.savefig(save_filename)
+    save_filename = os.path.join(save_path, f'row_noise.pdf')
+    plt.savefig(save_filename, bbox_inches='tight')
     print(f'[INFO] Read Noise plot saved: {save_filename}')
 
     plt.show()
